@@ -101,7 +101,8 @@ $app->group('/gateway', function() use ($app) {
 $app->group('/api', function () use ($app) {
         	
 	$app->get('/turbulencedata/:latitude/:longitude', function ($latitude, $longitude) {
-		echo "Received $latitude $longitude";
+		$results = \app\models\TurbulenceStatistic::regionalDataFromCoordinatesForRadius($latitude, $longitude, 1)->get();
+		
 	});
 
 	$app->post('/turbulencestatistic', function() use ($app) {
