@@ -98,11 +98,57 @@ $app->group('/gateway', function() use ($app) {
 });
 
 // API group
-$app->group('/api', function () use ($app) {
-        	
-	$app->get('/turbulencedata/:latitude/:longitude', function ($latitude, $longitude) {
-		$results = \app\models\TurbulenceStatistic::regionalDataFromCoordinatesForRadius($latitude, $longitude, 1)->get();
+$app->group('/api', function () use ($app) {        	
+
+	$app->get('/turbulencedata/:latitude/:longitude(/:radius)', function ($latitude, $longitude, $radius = 1) {
+		$results = \app\models\TurbulenceStatistic::notStale()
+				->regionalDataFromCoordinatesForRadius($latitude, $longitude, $radius)
+				->orderBy('altitude', 'asc')
+				->orderBy('created', 'asc')
+				->get();
 		
+		$currentAltitude = 0;
+		$currentAccelTotal = 0.0;
+		$currentSeconds = 0;
+		$previousCumulativeAccel = 0.0;
+
+		$finalResults = array();
+		
+		$i = 0;
+		foreach($results as $result){
+			if($currentAltitude != $result->altitude){
+				if($i > 0){
+					// Calculate average intensity and density for this altitude              
+                                	$finalResults[] = 
+						array('Altitude' => $currentAltitude, 'AverageIntensity' => $currentAccelTotal / $i);  
+				}
+
+				// Set next altitude to current	
+				$currentAltitude = $result->altitude;
+				
+				// Reset state vars
+				$currentSeconds = 0.0;
+				$currentAccelTotal = 0.0;
+				$previousCumulativeAccel = 0.0;
+				$i = 0;
+			}
+		
+			// Combine all axis
+			$cumulativeAccel = $result->x_accel + $result->y_accel + $result->z_accel;
+
+			// If first delta calculation, set this to the current cumulative accel value
+			if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
+
+			// Add the abs delta to the currentAccelTotal
+			$currentAccelTotal += abs($previousCumulativeAccel - $cumulativeAccel);
+
+			// Set the previousCumulativeAccel for the next delta calculation
+			$previousCumulativeAccel = $cumulativeAccel;			
+
+			// Increment the counter
+			$i++;
+		}
+		print_r($finalResults);
 	});
 
 	$app->post('/turbulencestatistic', function() use ($app) {
