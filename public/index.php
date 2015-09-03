@@ -114,14 +114,22 @@ $app->group('/api', function () use ($app) {
 
 		$finalResults = array();
 		
+		// $i will be incremented per altitude
 		$i = 0;
+		// $x will count the whole loop
+		$x = 0;
 		foreach($results as $result){
-			if($currentAltitude != $result->altitude){
-				if($i > 0){
-					// Calculate average intensity and density for this altitude              
-                                	$finalResults[] = 
-						array('Altitude' => $currentAltitude, 'AverageIntensity' => $currentAccelTotal / $i);  
-				}
+			// If this is the first iteration, initialize $currentAltitude
+			if($x == 0) $currentAltitude = $result->altitude;
+
+			// If we are changing altitudes OR this is the last result (in the case of the last altitude)
+			if($currentAltitude != $result->altitude || count($results) == ($x + 1)){
+				// Calculate average intensity and density for this altitude              
+				$avg = $currentAccelTotal / $i;
+				$finalResults[] = array(
+					'Altitude' => $currentAltitude, 
+					'AverageIntensity' => $avg, 
+					'Description' => \app\models\TurbulenceStatistic::getTurbulenceDescription($avg));  
 
 				// Set next altitude to current	
 				$currentAltitude = $result->altitude;
@@ -133,8 +141,8 @@ $app->group('/api', function () use ($app) {
 				$i = 0;
 			}
 		
-			// Combine all axis
-			$cumulativeAccel = $result->x_accel + $result->y_accel + $result->z_accel;
+			// Combine all axis, remove gravity
+			$cumulativeAccel = abs($result->x_accel + $result->y_accel + $result->z_accel) - 1;
 
 			// If first delta calculation, set this to the current cumulative accel value
 			if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
@@ -145,8 +153,9 @@ $app->group('/api', function () use ($app) {
 			// Set the previousCumulativeAccel for the next delta calculation
 			$previousCumulativeAccel = $cumulativeAccel;			
 
-			// Increment the counter
+			// Increment the counters
 			$i++;
+			$x++;
 		}
 		print_r($finalResults);
 	});
