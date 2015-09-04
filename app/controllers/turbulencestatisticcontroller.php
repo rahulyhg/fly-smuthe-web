@@ -44,29 +44,29 @@ class TurbulenceStatisticController {
                                 $firstTime = strtotime($result->created);
                         }
 
-			// If this is the last $result from this group
-                        if($currentGroupId != $result->group_id || count($results) == ($x + 1)) {
+			// If this is the last $result from this group, or we are changing altitude
+                        if($currentGroupId != $result->group_id || $currentAltitude != $result->altitude || count($results) == ($x + 1)) {
                                 // Set the last time
                                 $lastTime = strtotime($result->created);
+
+				// Time difference in minutes
+                                $diff = abs(($lastTime-$firstTime) / 60);
+
+                                $totalTime += $diff;
 
                                 // Reset the group counter so we can catch the first $result of the next group
                                 // when $groupCounter == 1
                                 $groupCounter = 0;
                                 $currentGroupId = $result->group_id;
-                        }
+
+                        	// Group has changed, reset the high pass filter vars
+                                $accelProcessor->reset();
+			}
 
                         // If this is the first $result of the group and we are past the very first overall iteration
                         if(($groupCounter == 1 && $x > 1) || count($results) == ($x + 1)) {
-                                // Time difference in minutes
-                                $diff = abs(($lastTime-$firstTime) / 60);
-
-                                $totalTime += $diff;
-
                                 // Set the $firstTime from this new group
                                 $firstTime = strtotime($result->created);
-
-                                // Group has changed, reset the high pass filter vars
-                                $accelProcessor->reset();
                         }
 
                         // If we are changing altitudes OR this is the last result (in the case of the last altitude)
@@ -97,7 +97,7 @@ class TurbulenceStatisticController {
 			$accelProcessor->highPass($result->x_accel, $result->y_accel, $result->z_accel);
 
                         // Combine all axis, remove gravity
-                        $cumulativeAccel = abs($accelProcessor->rollingX+ $accelProcessor->rollingY + $accelProcessor->rollingZ);
+                        $cumulativeAccel = abs($accelProcessor->rollingX + $accelProcessor->rollingY + $accelProcessor->rollingZ);
 
                         // If first delta calculation, set this to the current cumulative accel value
                         if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
