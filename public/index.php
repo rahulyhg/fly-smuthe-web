@@ -108,6 +108,10 @@ $app->group('/api', function () use ($app) {
 				->orderBy('created', 'asc')
 				->get();
 		
+		// High pass filter vars
+		$rollingX = $rollingY = $rollingZ = 0;
+		$kFilteringFactor = 0.1;
+
 		$currentAltitude = 0;
 		$currentAccelTotal = 0.0;
 		$currentSeconds = 0;
@@ -134,18 +138,30 @@ $app->group('/api', function () use ($app) {
 				$firstTime = strtotime($result->created);
 			}
 
+			// If this is the last $result from this group
 			if($currentGroupId != $result->group_id) {
+				// Set the last time
 				$lastTime = strtotime($result->created);
 				
+				// Reset the group counter so we can catch the first $result of the next group
+				// when $groupCounter == 1
 				$groupCounter = 0;
 				$currentGroupId = $result->group_id;
 			}
 
+			// If this is the first $result of the group and we are past the very first overall iteration
 			if($groupCounter == 1 && $x > 1) {
+				// Time difference in minutes
                                 $diff = abs(($lastTime-$firstTime) / 60);
+
+				// Gets the accel per min of the previous group
                                 $accelPerMin = $currentAccelTotal / $diff;
 
+				// Set the $firstTime from this new group
 				$firstTime = strtotime($result->created);
+
+				// Group has changed, reset the high pass filter vars
+				$rollingX = $rollingY = $rollingZ = 0;
 			}
 
 			// If we are changing altitudes OR this is the last result (in the case of the last altitude)
@@ -167,14 +183,22 @@ $app->group('/api', function () use ($app) {
 				$avgCounter = 0;
 			}
 		
+			$rollingX = ($result->x_accel * $kFilteringFactor) + ($rollingX * (1.0 - $kFilteringFactor));
+
+			$rollingY = ($result->y_accel * $kFilteringFactor) + ($rollingY * (1.0 - $kFilteringFactor));
+
+			$rollingZ = ($result->z_accel * $kFilteringFactor) + ($rollingZ * (1.0 - $kFilteringFactor));
+
 			// Combine all axis, remove gravity
-			$cumulativeAccel = abs($result->x_accel + $result->y_accel + $result->z_accel) - 1;
+			$cumulativeAccel = abs($rollingX + $rollingY + $rollingZ);
 
 			// If first delta calculation, set this to the current cumulative accel value
 			if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
 
 			// Add the abs delta to the currentAccelTotal
-			$currentAccelTotal += abs($previousCumulativeAccel - $cumulativeAccel);
+			$accelDelta = abs($previousCumulativeAccel - $cumulativeAccel);
+			error_log($result->altitude . " " . $accelDelta);
+			$currentAccelTotal += $accelDelta;
 
 			// Set the previousCumulativeAccel for the next delta calculation
 			$previousCumulativeAccel = $cumulativeAccel;			

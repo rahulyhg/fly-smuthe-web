@@ -8,15 +8,15 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 
 	const HoursUntilStale = 2;
 
-	const SmoothLimit = 0.20;
+	const SmoothLimit = 0.020;
 
-	const LightTurbulenceLimit = 0.40;
+	const LightTurbulenceLimit = 0.040;
 
-	const ModerateTurbulenceLimit = 0.80;
+	const ModerateTurbulenceLimit = 0.080;
 
-	const SevereTurbulenceLimit = 1.5;
+	const SevereTurbulenceLimit = 0.15;
 
-	const ExtremeTurbulenceLimit = 5.0;
+	const ExtremeTurbulenceLimit = 0.50;
 
 	public $timestamps = false;
 
