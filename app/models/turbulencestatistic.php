@@ -54,7 +54,7 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 	}
 
 	public static function wasBump($accel) {
-		return $accel >= TurbulenceStatistic::SmoothLimit;
+		return $accel > TurbulenceStatistic::SmoothLimit;
 	}
 }
 

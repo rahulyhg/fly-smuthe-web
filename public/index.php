@@ -103,7 +103,7 @@ $app->group('/api', function () use ($app) {
 	$app->get('/turbulencedata/:latitude/:longitude(/:radius)', function ($latitude, $longitude, $radius = 1) {
 		$controller = new \app\controllers\TurbulenceStatisticController();
 		$finalResults = $controller->getTurbulenceData($latitude, $longitude, $radius);
-		print_r($finalResults);
+		echo json_encode(array('ResponseCode' => \config\Constants::$success, 'Results' => $finalResults));
 	});
 
 	$app->post('/turbulencestatistic', function() use ($app) {
