@@ -27,7 +27,8 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
                 'altitude',
 		'latitude',
                 'longitude',
-                'created'
+                'created',
+		'group_id'
 	);
 
 	public function scopeNotStale($query){

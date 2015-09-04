@@ -104,28 +104,54 @@ $app->group('/api', function () use ($app) {
 		$results = \app\models\TurbulenceStatistic::notStale()
 				->regionalDataFromCoordinatesForRadius($latitude, $longitude, $radius)
 				->orderBy('altitude', 'asc')
+				->orderBy('group_id', 'asc')
 				->orderBy('created', 'asc')
 				->get();
 		
 		$currentAltitude = 0;
 		$currentAccelTotal = 0.0;
 		$currentSeconds = 0;
+		$currentGroupId = "";
+		$firstTime = null;
+		$lastTime = null;
 		$previousCumulativeAccel = 0.0;
 
 		$finalResults = array();
 		
-		// $i will be incremented per altitude
-		$i = 0;
+		// $avgCounter will be incremented per altitude
+		$avgCounter = 0;
+
+		// $groupCounter will be reset each group
+		$groupCounter = 0;		
+
 		// $x will count the whole loop
 		$x = 0;
 		foreach($results as $result){
-			// If this is the first iteration, initialize $currentAltitude
-			if($x == 0) $currentAltitude = $result->altitude;
+			// If this is the first iteration, initialize vars
+			if($x == 0) {
+				$currentAltitude = $result->altitude;
+				$currentGroupId = $result->group_id;
+				$firstTime = strtotime($result->created);
+			}
+
+			if($currentGroupId != $result->group_id) {
+				$lastTime = strtotime($result->created);
+				
+				$groupCounter = 0;
+				$currentGroupId = $result->group_id;
+			}
+
+			if($groupCounter == 1 && $x > 1) {
+                                $diff = abs(($lastTime-$firstTime) / 60);
+                                $accelPerMin = $currentAccelTotal / $diff;
+
+				$firstTime = strtotime($result->created);
+			}
 
 			// If we are changing altitudes OR this is the last result (in the case of the last altitude)
 			if($currentAltitude != $result->altitude || count($results) == ($x + 1)){
 				// Calculate average intensity and density for this altitude              
-				$avg = $currentAccelTotal / $i;
+				$avg = $currentAccelTotal / $avgCounter;
 				$finalResults[] = array(
 					'Altitude' => $currentAltitude, 
 					'AverageIntensity' => $avg, 
@@ -138,7 +164,7 @@ $app->group('/api', function () use ($app) {
 				$currentSeconds = 0.0;
 				$currentAccelTotal = 0.0;
 				$previousCumulativeAccel = 0.0;
-				$i = 0;
+				$avgCounter = 0;
 			}
 		
 			// Combine all axis, remove gravity
@@ -154,7 +180,8 @@ $app->group('/api', function () use ($app) {
 			$previousCumulativeAccel = $cumulativeAccel;			
 
 			// Increment the counters
-			$i++;
+			$avgCounter++;
+			$groupCounter++;
 			$x++;
 		}
 		print_r($finalResults);
@@ -165,13 +192,14 @@ $app->group('/api', function () use ($app) {
 		$data = json_decode($json, false);
 
 		$turbulenceStatistic = new \app\models\TurbulenceStatistic(array(
-			'x_accel' => $data->XAccel,
-                        'y_accel' => $data->YAccel,
-                        'z_accel' => $data->ZAccel,
-                        'altitude' => $data->Altitude,
-                        'latitude' => $data->Latitude,
-                        'longitude' => $data->Longitude,
-			'created' => $data->Created
+			'x_accel' 	=> $data->XAccel,
+                        'y_accel' 	=> $data->YAccel,
+                        'z_accel' 	=> $data->ZAccel,
+                        'altitude' 	=> $data->Altitude,
+                        'latitude' 	=> $data->Latitude,
+                        'longitude' 	=> $data->Longitude,
+			'created' 	=> $data->Created,
+			'group_id' 	=> $data->GroupId
 		));
 
 		$turbulenceStatistic->save();
