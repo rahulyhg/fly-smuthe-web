@@ -6,7 +6,7 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 
 	const EarthRadiusInNauticalMiles = 3440.28;
 
-	const HoursUntilStale = 2;
+	const HoursUntilStale = 3;
 
 	const SmoothLimit = 0.020;
 
