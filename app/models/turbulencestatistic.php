@@ -52,6 +52,10 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 
 		if($avgTurbulenceG <= TurbulenceStatistic::ExtremeTurbulenceLimit) return "Extreme";
 	}
+
+	public static function wasBump($accel) {
+		return $accel >= TurbulenceStatistic::SmoothLimit;
+	}
 }
 
 ?>

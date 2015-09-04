@@ -118,6 +118,7 @@ $app->group('/api', function () use ($app) {
 		$currentGroupId = "";
 		$firstTime = null;
 		$lastTime = null;
+		$totalTime = 0.0;
 		$previousCumulativeAccel = 0.0;
 
 		$finalResults = array();
@@ -126,7 +127,10 @@ $app->group('/api', function () use ($app) {
 		$avgCounter = 0;
 
 		// $groupCounter will be reset each group
-		$groupCounter = 0;		
+		$groupCounter = 0;
+
+		// $bumpCounter counts number of bumps
+		$bumpCounter = 0;
 
 		// $x will count the whole loop
 		$x = 0;
@@ -139,7 +143,7 @@ $app->group('/api', function () use ($app) {
 			}
 
 			// If this is the last $result from this group
-			if($currentGroupId != $result->group_id) {
+			if($currentGroupId != $result->group_id || count($results) == ($x + 1)) {
 				// Set the last time
 				$lastTime = strtotime($result->created);
 				
@@ -150,12 +154,11 @@ $app->group('/api', function () use ($app) {
 			}
 
 			// If this is the first $result of the group and we are past the very first overall iteration
-			if($groupCounter == 1 && $x > 1) {
+			if(($groupCounter == 1 && $x > 1) || count($results) == ($x + 1)) {
 				// Time difference in minutes
                                 $diff = abs(($lastTime-$firstTime) / 60);
 
-				// Gets the accel per min of the previous group
-                                $accelPerMin = $currentAccelTotal / $diff;
+				$totalTime += $diff;				
 
 				// Set the $firstTime from this new group
 				$firstTime = strtotime($result->created);
@@ -170,7 +173,10 @@ $app->group('/api', function () use ($app) {
 				$avg = $currentAccelTotal / $avgCounter;
 				$finalResults[] = array(
 					'Altitude' => $currentAltitude, 
-					'AverageIntensity' => $avg, 
+					'AverageIntensity' => $avg,
+					'Bumps' => $bumpCounter,
+					'Minutes' => $totalTime,
+					'BumpsPerMinute' => $totalTime > 0 ? $bumpCounter / $totalTime : 0, 
 					'Description' => \app\models\TurbulenceStatistic::getTurbulenceDescription($avg));  
 
 				// Set next altitude to current	
@@ -181,8 +187,11 @@ $app->group('/api', function () use ($app) {
 				$currentAccelTotal = 0.0;
 				$previousCumulativeAccel = 0.0;
 				$avgCounter = 0;
+				$totalTime = 0;
+				$bumpCounter = 0;
 			}
 		
+			// High pass filtered values
 			$rollingX = ($result->x_accel * $kFilteringFactor) + ($rollingX * (1.0 - $kFilteringFactor));
 
 			$rollingY = ($result->y_accel * $kFilteringFactor) + ($rollingY * (1.0 - $kFilteringFactor));
@@ -197,7 +206,11 @@ $app->group('/api', function () use ($app) {
 
 			// Add the abs delta to the currentAccelTotal
 			$accelDelta = abs($previousCumulativeAccel - $cumulativeAccel);
-			error_log($result->altitude . " " . $accelDelta);
+	
+			if(\app\models\TurbulenceStatistic::wasBump($accelDelta)){
+				$bumpCounter++;
+			}
+			
 			$currentAccelTotal += $accelDelta;
 
 			// Set the previousCumulativeAccel for the next delta calculation
