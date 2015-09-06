@@ -72,14 +72,15 @@ class TurbulenceStatisticController {
                         // If we are changing altitudes OR this is the last result (in the case of the last altitude)
                         if($currentAltitude != $result->altitude || count($results) == ($x + 1)){
                                 // Calculate average intensity and density for this altitude              
-                                $avg = $currentAccelTotal / $avgCounter;
+                                $avg = $avgCounter > 0 ? $currentAccelTotal / $avgCounter : 0;
                                 $finalResults[] = array(
                                         'Altitude' => $currentAltitude,
                                         'AverageIntensity' => $avg,
                                         'Bumps' => $bumpCounter,
                                         'Minutes' => $totalTime,
                                         'BumpsPerMinute' => $totalTime > 0 ? $bumpCounter / $totalTime : 0,
-                                        'Description' => \app\models\TurbulenceStatistic::getTurbulenceDescription($avg));
+                                        'Description' => \app\models\TurbulenceStatistic::getTurbulenceDescription($avg),
+					'IntensityRating' => \app\models\TurbulenceStatistic::getIntensityRating($avg));
 
                                 // Set next altitude to current 
                                 $currentAltitude = $result->altitude;
