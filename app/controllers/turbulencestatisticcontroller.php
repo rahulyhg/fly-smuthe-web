@@ -80,7 +80,9 @@ class TurbulenceStatisticController {
                                         'Minutes' => $totalTime,
                                         'BumpsPerMinute' => $totalTime > 0 ? $bumpCounter / $totalTime : 0,
                                         'Description' => \app\models\TurbulenceStatistic::getTurbulenceDescription($avg),
-					'IntensityRating' => \app\models\TurbulenceStatistic::getIntensityRating($avg));
+					'IntensityRating' => \app\models\TurbulenceStatistic::getIntensityRating($avg),
+					'Radius' => $radius,
+					'Accuracy' => $avgCounter);
 
                                 // Set next altitude to current 
                                 $currentAltitude = $result->altitude;
