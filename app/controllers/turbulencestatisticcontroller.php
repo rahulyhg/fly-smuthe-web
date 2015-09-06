@@ -97,20 +97,22 @@ class TurbulenceStatisticController {
                         // High pass filtered values
 			$accelProcessor->highPass($result->x_accel, $result->y_accel, $result->z_accel);
 
-                        // Combine all axis, remove gravity
+			// Combine all axis, remove gravity
                         $cumulativeAccel = abs($accelProcessor->rollingX + $accelProcessor->rollingY + $accelProcessor->rollingZ);
 
-                        // If first delta calculation, set this to the current cumulative accel value
-                        if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
+			if($avgCounter > 0){
+				// If first delta calculation, set this to the current cumulative accel value
+                        	if($previousCumulativeAccel == 0.0) $previousCumulativeAccel = $cumulativeAccel;
 
-                        // Add the abs delta to the currentAccelTotal
-                        $accelDelta = abs($previousCumulativeAccel - $cumulativeAccel);
+                        	// Add the abs delta to the currentAccelTotal
+                        	$accelDelta = abs($previousCumulativeAccel - $cumulativeAccel);
 
-                        if(\app\models\TurbulenceStatistic::wasBump($accelDelta)){
-                                $bumpCounter++;
-                        }
+                        	if(\app\models\TurbulenceStatistic::wasBump($accelDelta)){
+                                	$bumpCounter++;
+                        	}
 
-                        $currentAccelTotal += $accelDelta;
+                        	$currentAccelTotal += $accelDelta;
+			}
 
                         // Set the previousCumulativeAccel for the next delta calculation
                         $previousCumulativeAccel = $cumulativeAccel;
