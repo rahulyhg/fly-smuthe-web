@@ -4,8 +4,8 @@ namespace app\controllers;
 
 class TurbulenceStatisticController {
 
-	public function getTurbulenceData($latitude, $longitude, $radius){
-		$results = \app\models\TurbulenceStatistic::notStale()
+	public function getTurbulenceData($latitude, $longitude, $radius, $hoursUntilStale){
+		$results = \app\models\TurbulenceStatistic::notStale($hoursUntilStale)
                                 ->regionalDataFromCoordinatesForRadius($latitude, $longitude, $radius)
                                 ->orderBy('altitude', 'asc')
                                 ->orderBy('group_id', 'asc')

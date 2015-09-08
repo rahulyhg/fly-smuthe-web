@@ -6,8 +6,6 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 
 	const EarthRadiusInNauticalMiles = 3440.28;
 
-	const HoursUntilStale = 3;
-
 	const SmoothLimit = 0.025;
 
 	const SmoothIntensityRating = 1;
@@ -38,12 +36,13 @@ class TurbulenceStatistic extends \Illuminate\Database\Eloquent\Model {
 		'latitude',
                 'longitude',
                 'created',
-		'group_id'
+		'group_id',
+		'user_id'
 	);
 
-	public function scopeNotStale($query){
+	public function scopeNotStale($query, $hoursUntilStale){
 		date_default_timezone_set("UTC");
-		$staleDate = date("Y-m-d H:i:s", time() - (60 * 60 * TurbulenceStatistic::HoursUntilStale));
+		$staleDate = date("Y-m-d H:i:s", time() - (60 * 60 * $hoursUntilStale));
 		return $query->where('created', '>=', $staleDate);
 	}
 

@@ -44,26 +44,28 @@ class DatabaseConnector extends \Slim\Middleware {
 	}
 }
 
-$app->add(new DatabaseConnector());
-
 use \Slim\Middleware\HttpBasicAuthentication\AuthenticatorInterface;
-
-class APIAuthenticator implements AuthenticatorInterface {
-	public function __invoke(array $arguments) {
-		return true;
-	}
-}
 
 $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 	"path" => "/api",
 	"realm" => "Protected",
-	"authenticator" => new APIAuthenticator()
+	"authenticator" => function ($arguments) use ($app) {
+		$results = \app\models\UserAuthorization::apiId($arguments['user'])->get();
+                if($results == null || count($results) == 0) return false;
+
+                $userAuthorization = $results[0];
+                if(!password_verify($arguments['password'], $userAuthorization->api_key)) return false;
+
+                $app->user_id = $userAuthorization->user_id;
+
+                return true;
+	}
 ]));
 
 class GatewayAuthenticator implements AuthenticatorInterface {
-	public function __invoke(array $arguments) {
+        public function __invoke(array $arguments) {
 		return $arguments['user'] == \config\SecureConfig::$apiId && $arguments['password'] == \config\SecureConfig::$apiSecret;
-	}
+        }
 }
 
 $app->add(new \Slim\Middleware\HttpBasicAuthentication([
@@ -71,6 +73,8 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 	"realm" => "Protected",
 	"authenticator" => new GatewayAuthenticator()
 ]));
+
+$app->add(new DatabaseConnector());
 
 // Only invoked if mode is "production"
 $app->configureMode('production', function () use ($app) {
@@ -91,18 +95,46 @@ $app->configureMode('development', function () use ($app) {
 });
 
 $app->group('/gateway', function() use ($app) {
+	
 	$app->post('/register', function() use ($app) {
-                $json = $app->request->getBody();
+		$json = $app->request->getBody();
                 $data = json_decode($json, false);
+
+		// TODO: Send email for confirmation
+		$pass = \app\utilities\PasswordUtility::GenerateSalt();
+		$now = date("Y-m-d H:i:s");
+		$hash = password_hash($data->Email.$now, PASSWORD_DEFAULT);
+
+		$user = new \app\models\User(array(
+                        'username'      => $data->Email,
+                        'password'      => password_hash($pass, PASSWORD_DEFAULT),
+                        'email'         => $data->Email,
+			'confirmation'	=> $now
+                ));
+
+                $user->save();
+
+		$apiId = \app\utilities\PasswordUtility::GenerateSalt();
+		$apiKey = \app\utilities\PasswordUtility::GenerateSalt();
+
+		$userAuthorization = new \app\models\UserAuthorization(array(
+			'user_id' 	=> $user->id,
+			'api_id'	=> $apiId,
+			'api_key'	=> password_hash($apiKey, PASSWORD_DEFAULT)
+		));
+
+		$userAuthorization->save();
+
+                echo json_encode(array('ResponseCode' => \config\Constants::$success, 'APIId' => $apiId, 'APIKey' => $apiKey));
         });
 });
 
 // API group
 $app->group('/api', function () use ($app) {        	
 
-	$app->get('/turbulencedata/:latitude/:longitude(/:radius)', function ($latitude, $longitude, $radius = 1) {
+	$app->get('/turbulencedata/:latitude/:longitude(/:radius(/:hoursUntilStale))', function ($latitude, $longitude, $radius = 1, $hoursUntilStale = 2) {
 		$controller = new \app\controllers\TurbulenceStatisticController();
-		$finalResults = $controller->getTurbulenceData($latitude, $longitude, $radius);
+		$finalResults = $controller->getTurbulenceData($latitude, $longitude, $radius, $hoursUntilStale);
 		echo json_encode(array('ResponseCode' => \config\Constants::$success, 'Results' => $finalResults));
 	});
 
@@ -118,7 +150,8 @@ $app->group('/api', function () use ($app) {
                         'latitude' 	=> $data->Latitude,
                         'longitude' 	=> $data->Longitude,
 			'created' 	=> $data->Created,
-			'group_id' 	=> $data->GroupId
+			'group_id' 	=> $data->GroupId,
+			'user_id'	=> $app->user_id
 		));
 
 		$turbulenceStatistic->save();
