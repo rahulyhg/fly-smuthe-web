@@ -141,23 +141,41 @@ $app->group('/api', function () use ($app) {
 	$app->post('/turbulencestatistic', function() use ($app) {
 		$json = $app->request->getBody();
 		$data = json_decode($json, false);
-
-		$turbulenceStatistic = new \app\models\TurbulenceStatistic(array(
-			'x_accel' 	=> $data->XAccel,
-                        'y_accel' 	=> $data->YAccel,
-                        'z_accel' 	=> $data->ZAccel,
-                        'altitude' 	=> $data->Altitude,
-                        'latitude' 	=> $data->Latitude,
-                        'longitude' 	=> $data->Longitude,
-			'created' 	=> $data->Created,
-			'group_id' 	=> $data->GroupId,
-			'user_id'	=> $app->user_id
-		));
-
-		$turbulenceStatistic->save();
 		
-		echo json_encode(array('ResponseCode' => \config\Constants::$success));
+		if(is_object($data)){
+
+			$turbulenceStatistic = new \app\models\TurbulenceStatistic(array(
+				'x_accel' 	=> $data->XAccel,
+                        	'y_accel' 	=> $data->YAccel,
+                        	'z_accel' 	=> $data->ZAccel,
+                        	'altitude' 	=> $data->Altitude,
+                        	'latitude' 	=> $data->Latitude,
+                        	'longitude' 	=> $data->Longitude,
+				'created' 	=> $data->Created,
+				'group_id' 	=> $data->GroupId,
+				'user_id'	=> $app->user_id
+			));
+
+			$turbulenceStatistic->save();
+		
+			echo json_encode(array('ResponseCode' => \config\Constants::$success));
+			return;
+		}
+
+		echo json_encode(array('ResponseCode' => \config\Constants::$failure));
 	});
+});
+
+$app->get('/', function () use ($app) {
+	echo "Coming soon...";
+});
+
+$app->get('/support', function () use ($app) {
+	echo "Please email support@flysmuthe.com";
+});
+
+$app->get('/privacy', function () use ($app) {
+        echo "Defer to https://sovereignshare.com/privacy for now please.";
 });
 
 $app->run();
